@@ -1,9 +1,17 @@
 from binance.client import Client
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Load Binance API credentials from environment variables
 BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
 BINANCE_API_SECRET = os.getenv("BINANCE_API_SECRET")
+
+# Print debug info
+print("Utils - API Key present:", bool(BINANCE_API_KEY))
+print("Utils - API Secret present:", bool(BINANCE_API_SECRET))
 
 client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
@@ -13,7 +21,7 @@ def get_futures_balance(asset="USDT"):
     """
     try:
         balances = client.futures_account_balance()
-        for balance in balances:
+        for balance in balances:    
             if balance["asset"] == asset:
                 return float(balance["balance"])
         return 0.0

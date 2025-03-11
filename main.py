@@ -21,20 +21,24 @@ def index():
         "futures_balance": futures_balance
     })
 
+@app.route("/debug")
+def debug():
+    return jsonify({
+        "status": "running",
+        "working_directory": os.getcwd(),
+        "env_file_exists": os.path.exists(".env")
+    })
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
-    # Print received data for debugging
-    print("Received webhook data:", data)
-
     try:
         # Forward the data to your local ngrok server
         response = requests.post(ngrok_url, json=data)
         print(f"Forwarded to local server. Response: {response.status_code}")
-
 
         if response.status_code != 200:
             return jsonify({
