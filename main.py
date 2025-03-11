@@ -2,30 +2,18 @@ from flask import Flask, request, jsonify
 import requests
 from dotenv import load_dotenv
 import os
-from utils.binance_utils import get_futures_balance, place_order
 
-# Load environment variables
 load_dotenv()
 
-# Your local ngrok URL
+# Load environment variables
 ngrok_url = os.getenv("NGROK_URL")
-
-# Fixie proxy setup
-fixie_url = os.getenv("FIXIE_URL")
-proxies = {
-    "http": fixie_url,
-    "https": fixie_url
-}
+tradingview_passphrase = os.getenv("TRADINGVIEW_PASSPHRASE")
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
-    futures_balance = get_futures_balance("USDT")
-    return jsonify({
-        "message": "TradingView Webhook Listener is Running!",
-        "futures_balance": futures_balance
-    })
+    return jsonify({"message": "Webhook proxy server running"})
 
 @app.route("/debug")
 def debug():
@@ -37,32 +25,28 @@ def debug():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    auth_header = request.headers.get("TRADINGVIEW_PASSPHRASE")
+    expected_passphrase = os.getenv("TRADINGVIEW_PASSPHRASE")
+
+    if auth_header != expected_passphrase:
+        return jsonify({"error": "Unauthorized access"}), 401
+
     data = request.get_json()
+    print("sent signal", data)
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
     try:
-        # Forward the webhook using Fixie proxy explicitly
-        response = requests.post(ngrok_url, json=data, proxies=proxies)
-        print(f"Forwarded to local server via Fixie proxy. Response: {response.status_code}")
-
+        response = requests.post(ngrok_url, json=data)
         if response.status_code != 200:
-            return jsonify({
-                "status": "error",
-                "message": "Local server returned an error"
-            }), response.status_code
+            return jsonify({"error": "Local server error", "details": response.text}), response.status_code
 
         return jsonify({
             "status": "success",
-            "message": "Signal forwarded to local server via proxy",
             "local_response": response.json()
         }), 200
     except Exception as e:
-        print(f"Error forwarding to local server: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to forward signal via proxy: {str(e)}"
-        }), 500
+        return jsonify({"error": "Request error", "details": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
