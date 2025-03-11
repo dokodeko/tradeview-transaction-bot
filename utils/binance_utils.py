@@ -8,7 +8,16 @@ load_dotenv()
 # Load Binance API credentials from environment variables
 BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
 BINANCE_API_SECRET = os.getenv("BINANCE_API_SECRET")
+FIXIE_URL = os.getenv("FIXIE_URL")
 
+#TODO: Configure local environment requests to use Fixie proxy
+# Configure the Binance client to use Fixie proxy explicitly
+client = Client(BINANCE_API_KEY, BINANCE_API_SECRET, {
+    "proxies": {
+        "http": FIXIE_URL,
+        "https": FIXIE_URL
+    }
+})
 # Print debug info
 print("Utils - API Key present:", bool(BINANCE_API_KEY))
 print("Utils - API Secret present:", bool(BINANCE_API_SECRET))
