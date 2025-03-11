@@ -7,7 +7,7 @@ load_dotenv()
 
 # Load environment variables
 ngrok_url = os.getenv("NGROK_URL")
-tradingview_passphrase = os.getenv("TRADINGVIEW_PASSPHRASE")
+expected_passphrase = os.getenv("TRADINGVIEW_PASSPHRASE")
 
 app = Flask(__name__)
 
@@ -25,19 +25,27 @@ def debug():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    auth_header = request.headers.get("TRADINGVIEW_PASSPHRASE")
-    expected_passphrase = os.getenv("TRADINGVIEW_PASSPHRASE")
-
-    if auth_header != expected_passphrase:
-        return jsonify({"error": "Unauthorized access"}), 401
-
+    # Ensure JSON payload exists
     data = request.get_json()
-    print("sent signal", data)
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
+    # Extract passphrase from the JSON body
+    received_passphrase = data.get("TRADINGVIEW_PASSPHRASE")
+
+    # Validate passphrase
+    if received_passphrase != expected_passphrase:
+        return jsonify({"error": "Unauthorized access"}), 401
+
+    print("Received signal:", data)
+
     try:
-        response = requests.post(ngrok_url, json=data)
+        # Ensure ngrok_url points to the webhook endpoint
+        webhook_url = ngrok_url if ngrok_url.endswith('/webhook') else f"{ngrok_url}/webhook"
+        response = requests.post(webhook_url, json=data)
+        
+        print(f"Forwarding to: {webhook_url}")
+        
         if response.status_code != 200:
             return jsonify({"error": "Local server error", "details": response.text}), response.status_code
 
